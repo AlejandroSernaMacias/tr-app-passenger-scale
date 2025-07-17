@@ -1,0 +1,128 @@
+﻿<UserControl x:Class="TR.Torrey.Weight.Capture.Ui.ScaleDetail"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
+             xmlns:local="clr-namespace:TR.Torrey.Weight.Capture.Ui"
+             mc:Ignorable="d" 
+             Style="{StaticResource FormPopup}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="X" Command="{Binding ClosePopupCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="30" Height="30" Padding="0"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" Margin="0,10" Text="{Binding TxtNewScale}" Style="{StaticResource TextBlockTitle}" />
+
+        <Grid Grid.Row="2" Margin="0,10">
+
+            <Border Style="{StaticResource BorderTextBoxGray}">
+                <TextBox
+                    Width="200"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    FontSize="18"
+                    MinWidth="300"
+                    VerticalAlignment="Center"
+                    Padding="5"
+                    Margin="10,0"
+                    Foreground="#FFFFFF"
+                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                    Text="{Binding Name}"
+                    materialDesign:HintAssist.Hint="{Binding TxtName}"
+                    PreviewTextInput="only_characters"/>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="3">
+            <Border Style="{StaticResource BorderTextBoxGray}">
+                <TextBox
+                    Width="200"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    FontSize="18"
+                    MinWidth="300"
+                    VerticalAlignment="Center"
+                    Padding="5"
+                    Margin="10,0"
+                    Foreground="#FFFFFF"
+                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                    Text="{Binding Ip}"
+                    materialDesign:HintAssist.Hint="{Binding TxtIp}"
+                    PreviewTextInput="only_ip"/>
+            </Border>
+
+        </Grid>
+        <Grid Grid.Row="4" Margin="0,10">
+            <Border Style="{StaticResource BorderTextBoxGray}">
+                <TextBox
+                    Width="200"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    FontSize="18"
+                    MinWidth="300"
+                    VerticalAlignment="Center"
+                    Padding="5"
+                    Margin="10,0"
+                    Foreground="#FFFFFF"
+                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                    Text="{Binding MinWeight}"
+                    materialDesign:HintAssist.Hint="{Binding TxtMinWeight}"
+                    PreviewTextInput="only_weight"/>
+            </Border>
+
+        </Grid>
+
+        <Grid Grid.Row="5" Margin="0,10">
+            <Border Style="{StaticResource BorderTextBoxGray}">
+                <TextBox
+                    Width="200"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    FontSize="18"
+                    MinWidth="300"
+                    VerticalAlignment="Center"
+                    Padding="5"
+                    Margin="10,0"
+                    Foreground="#FFFFFF"
+                    Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                    Text="{Binding MinTime}"
+                    materialDesign:HintAssist.Hint="{Binding TxtMinTime}"
+                    PreviewTextInput="only_number"/>
+            </Border>
+
+        </Grid>
+
+        <Grid Grid.Row="6" Margin="0,10">
+            <TextBlock Text="{Binding TxtStatus, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource TextBlockButton}" Foreground="#E30613"/>
+        </Grid>
+
+        <Grid Grid.Row="7" Margin="0,10">
+            <Border Style="{StaticResource BorderTextBoxRed}">
+                <Button x:Name="btnSave"
+                    Height="40"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
+                    Style="{StaticResource MaterialDesignRaisedDarkButton}"
+                    ToolTip="{Binding TxtSave}"
+                    Command="{Binding SaveCommand}">
+                    <TextBlock Text="{Binding TxtSave}" Style="{StaticResource TextBlockButton}"/>
+                </Button>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+</UserControl>

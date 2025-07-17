@@ -1,0 +1,95 @@
+﻿<UserControl x:Class="TR.Torrey.Weight.Capture.Ui.Weighing"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:TR.Torrey.Weight.Capture.Ui"
+             mc:Ignorable="d" 
+             Style="{StaticResource StyleUC}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Label Content="{Binding Title}" Style="{StaticResource ItemsFound}" />
+            </Grid>
+            <Grid Grid.Column="1">
+                <Label Content="{Binding TotalSamples}" Style="{StaticResource ItemsFoundActive}"/>
+            </Grid>
+            <Grid Grid.Column="2">
+                <Label Content="{Binding TotalWeight}" Style="{StaticResource ItemsFoundPending}"/>
+            </Grid>
+
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Label Content="{Binding ScalesFound}" Style="{StaticResource ItemsFound}"/>
+            </Grid>
+            <Grid Grid.Column="1">
+                <Label Content="{Binding Weight}" Style="{StaticResource ItemsFound}"/>
+            </Grid>
+
+            <Border Grid.Column="2" Style="{StaticResource BorderTextBoxBlack}" Margin="10,0">
+                <Button
+                    Height="40"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
+                    Style="{StaticResource MaterialDesignRaisedDarkButton}"
+                    ToolTip="{Binding TxtReport}"
+                    Command="{Binding ReportCommand}">
+                    <TextBlock Text="{Binding TxtReport}" Style="{StaticResource TextBlockButton}"/>
+                </Button>
+            </Border>
+
+        </Grid>
+
+        <DataGrid Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" ItemsSource="{Binding Scales}" Margin="10,50,10,10" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Style="{StaticResource MaterialDesignDataGrid}">
+
+            <DataGrid.Resources>
+                <!-- Definir el estilo para los encabezados -->
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#009c36"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Padding" Value="10"/>
+                </Style>
+                <!-- Estilo para las filas -->
+                <Style TargetType="DataGridRow">
+                    <Setter Property="BorderBrush" Value="#414141"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                </Style>
+            </DataGrid.Resources>
+            
+            <DataGrid.Columns>
+                <DataGridTextColumn x:Name="HeaderScaleName"    Binding="{Binding vName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderIp"           Binding="{Binding vIp, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderMinWeight"    Binding="{Binding fMinWeight, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderMinTime"      Binding="{Binding iMinTime, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderScaleStatus"  Binding="{Binding vStatusScale, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="{Binding vStatusColor}" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderSamples"      Binding="{Binding iSamples, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderWeight"       Binding="{Binding fWeight, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderTotal"        Binding="{Binding fTotal, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+    </Grid>
+</UserControl>

@@ -1,0 +1,116 @@
+﻿<Window x:Class="TR.Torrey.Weight.Capture.Viewmodels.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:System="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:TR.Torrey.Weight.Capture.Viewmodels"
+        mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen"
+        Style="{StaticResource StyleWindow}" 
+        WindowState="Maximized">
+
+    <materialDesign:DialogHost CloseOnClickAway="True" x:Name="dgContent">
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <!--Menu-->
+            <Grid Grid.Column="0" HorizontalAlignment="Left">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" MinHeight="150" VerticalAlignment="Bottom">
+
+                    <Image Source="{StaticResource iconViva}" Stretch="Uniform" MaxWidth="150"/>
+                    <!--Background="#999999"-->
+                </Grid>
+                <Grid Grid.Row="1" Background="#009c36">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" x:Name="Scales" MouseDown="Scales_MouseDown" Cursor="Hand" Margin="0,20,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Image Grid.Column="0" Source="{StaticResource iconWeighings}" Style="{StaticResource ImageItem}"/>
+                        <TextBlock Grid.Column="1" Text="Básculas" Style="{StaticResource TextBlockItem}"/>
+                    </Grid>
+                    <Grid Grid.Row="1" x:Name="ScalesList" MouseDown="ScalesWeighing_MouseDown" Cursor="Hand" Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Image Grid.Column="0" Source="{StaticResource iconWeighings}" Style="{StaticResource ImageItem}"/>
+                        <TextBlock Grid.Column="1" Text="Básculas en linea" Style="{StaticResource TextBlockItem}"/>
+                    </Grid>
+                    <Grid Grid.Row="2" VerticalAlignment="Bottom">
+                        <TextBlock x:Name="SoftwareVersion" Text="Básculas en linea" Style="{StaticResource TextBlockItem}"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+            <!--Header Bar-->
+            <Grid Grid.Column="1">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="60"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="1">
+                    <ContentControl x:Name="ContentMenu"/>
+                </Grid>
+
+            </Grid>
+
+        </Grid>
+
+        <!--DialogHost-->
+        <materialDesign:DialogHost.DialogContent>
+            <Grid Background="White">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" x:Name="dgError" Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" x:Name="msgError" Text="Error" Style="{StaticResource TextBlockTitle}" Foreground="#414141" />
+
+                    <Border Grid.Row="1" x:Name="bdrBtnCloseMessage" Style="{StaticResource BorderButton}" Background="#414141" BorderBrush=" #414141" MaxWidth="150" Margin="0,10,0,0">
+                        <Button x:Name="btnCloseMessage"
+                                Height="50"
+                                Background="Transparent"
+                                BorderBrush="#333333"
+                                BorderThickness="0"
+                                ToolTip="Download file"
+                                IsEnabled="{Binding DataContext.ControlsEnabled, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
+                                Style="{StaticResource MaterialDesignRaisedDarkButton}"
+                                Click="btnCloseMessage_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="txtbtnCloseMessage"></TextBlock>
+                            </StackPanel>
+                        </Button>
+                    </Border>
+                </Grid>
+                
+            </Grid>
+        </materialDesign:DialogHost.DialogContent>
+
+    </materialDesign:DialogHost>
+</Window>
