@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "1YBMrJDw2HAZiV34SFq7J1Ih+JPgawTl4niUUnJ/xGmDBEE38j0QeXS4jRkWcl+gfardu8ec7Pq1crVXsnIN6Q==",
+  "dgSpecHash": "Z1Z2qNh3JblD1CCdXQMy97R7Y2JX1t/l4YzNl9Wotov/Yc4qujmeimZeln/sjZkV3piGdHh3xlzoVt5mCXQLOg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\desar\\OneDrive\\Documentos\\TR - Weight Capture\\05 - Source\\PC\\TR.Torrey.Weight.Capture\\TR.Torrey.Weight.Capture\\TR.Torrey.Weight.Capture.csproj",
+  "projectFilePath": "C:\\Users\\desar\\OneDrive\\Documentos\\TR - Weight Capture\\05 - Source\\PC\\tr-app-passenger-scale\\TR.Torrey.Weight.Capture\\TR.Torrey.Weight.Capture.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\desar\\.nuget\\packages\\csvhelper\\33.0.1\\csvhelper.33.0.1.nupkg.sha512",
     "C:\\Users\\desar\\.nuget\\packages\\customselectfiledlg\\1.0.0\\customselectfiledlg.1.0.0.nupkg.sha512",
