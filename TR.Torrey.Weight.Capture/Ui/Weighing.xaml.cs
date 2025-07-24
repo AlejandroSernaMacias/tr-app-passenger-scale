@@ -44,7 +44,7 @@ namespace TR.Torrey.Weight.Capture.Ui
         private void UC_Unloaded(object sender, RoutedEventArgs e)
         {
             var viewModel = DataContext as WeighingViewModel;
-            viewModel?.CommunicationDisconectCommand.Execute(null);
+            //viewModel?.CommunicationDisconectCommand.Execute(null);
         }
         private void UC_Loaded(object sender, RoutedEventArgs e)
         {

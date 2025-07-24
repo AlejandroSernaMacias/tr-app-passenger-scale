@@ -152,3 +152,4 @@ C:\Users\desar\OneDrive\Documentos\TR - Weight Capture\05 - Source\PC\tr-app-pas
 C:\Users\desar\OneDrive\Documentos\TR - Weight Capture\05 - Source\PC\tr-app-passenger-scale\TR.Torrey.Weight.Capture\obj\Debug\net7.0-windows\TR.Torrey.Weight.Capture.pdb
 C:\Users\desar\OneDrive\Documentos\TR - Weight Capture\05 - Source\PC\tr-app-passenger-scale\TR.Torrey.Weight.Capture\obj\Debug\net7.0-windows\TR.Torrey.Weight.Capture.genruntimeconfig.cache
 C:\Users\desar\OneDrive\Documentos\TR - Weight Capture\05 - Source\PC\tr-app-passenger-scale\TR.Torrey.Weight.Capture\obj\Debug\net7.0-windows\ref\TR.Torrey.Weight.Capture.dll
+C:\Users\desar\OneDrive\Documentos\TR - Weight Capture\05 - Source\PC\tr-app-passenger-scale\TR.Torrey.Weight.Capture\obj\Debug\net7.0-windows\GeneratedInternalTypeHelper.g.cs

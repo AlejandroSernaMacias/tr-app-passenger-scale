@@ -48,6 +48,28 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
 
         #region TEXT VALUES
+        private int _onlineCount;
+        public int OnlineCount
+        {
+            get => _onlineCount;
+            set
+            {
+                _onlineCount = value;
+                OnPropertyChanged(nameof(OnlineCount));
+            }
+        }
+
+        private int _offlineCount;
+        public int OfflineCount
+        {
+            get => _offlineCount;
+            set
+            {
+                _offlineCount = value;
+                OnPropertyChanged(nameof(OfflineCount));
+            }
+        }
+
         private string _filterText;
         public string FilterText
         {
@@ -102,15 +124,15 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
         public WeighingViewModel(IDialogAlert dialogAlert)
         {
-            ReportCommand                   = new RelayCommand<int>(Report);
-            CommunicationDisconectCommand   = new RelayCommand<int>(CommunicationDisconect);
+            ReportCommand = new RelayCommand<int>(Report);
+            CommunicationDisconectCommand = new RelayCommand<int>(CommunicationDisconect);
 
             this._dialogAlert = dialogAlert;
 
             loadListScales();
             initFile();
 
-            if(allScales?.Result.Count > 0)
+            if (allScales?.Result.Count > 0)
                 readScales();
             else
                 ShowAlert(Common.Common.MSG_SCALE_NOT_FOUND);
@@ -119,12 +141,12 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
         public void loadListScales()
         {
-            allScales   = GetAll();
-            _scales     = new ObservableCollection<Models.Scale>(allScales.Result.ToList());
+            allScales = GetAll();
+            _scales = new ObservableCollection<Models.Scale>(allScales.Result.ToList());
 
-            var filter1     = _scales.Where(i => i.vIp != null && i.vName != null).ToList();
+            var filter1 = _scales.Where(i => i.vIp != null && i.vName != null).ToList();
             _filteredScales = new ObservableCollection<Models.Scale>(filter1.Take(200));
-            ScalesFound     = MessageFound(_filteredScales.Count, allScales.Result.Count);
+            ScalesFound = MessageFound(_filteredScales.Count, allScales.Result.Count);
 
             FilterText = string.Empty;
         }
@@ -203,16 +225,16 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
                     escritor.WriteLine(",,");
                     escritor.WriteLine(",,");
 
-                    escritor.WriteLine("" +Common.Common.MSG_SCALE + "," +Common.Common.MSG_IP + "," +Common.Common.MSG_SAMPLES + "," +Common.Common.MSG_TOTAL + "," + Common.Common.MSG_DATE + "");
+                    escritor.WriteLine("" + Common.Common.MSG_SCALE + "," + Common.Common.MSG_IP + "," + Common.Common.MSG_SAMPLES + "," + Common.Common.MSG_TOTAL + "," + Common.Common.MSG_DATE + "");
 
                     foreach (var scale in dictionaryScales)
                     {
                         var scaleValues = _scales?.FirstOrDefault(b => b.vName == scale.Key);
 
-                        var iSamples= dictionaryWeighings[scale.Key];
-                        var fTotal  = dictionaryTotalWeighings[scale.Key];
+                        var iSamples = dictionaryWeighings[scale.Key];
+                        var fTotal = dictionaryTotalWeighings[scale.Key];
 
-                        escritor.WriteLine(scale.Key + "," + scaleValues?.vIp  + "," + iSamples + "," + fTotal + "," + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "");
+                        escritor.WriteLine(scale.Key + "," + scaleValues?.vIp + "," + iSamples + "," + fTotal + "," + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "");
                     }
                 }
 
@@ -255,7 +277,7 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
             if (saveDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                var path    = System.IO.Path.GetFullPath(saveDialog.FileName);
+                var path = System.IO.Path.GetFullPath(saveDialog.FileName);
 
                 System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
 
@@ -287,104 +309,58 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
         }
 
         #endregion
-
         public async void readScales()
         {
-            try
+            dictionaryScales.Clear();
+            foreach (var sc in _scales.Take(200))
+                dictionaryScales[sc.vName] = new IPEndPoint(IPAddress.Parse(sc.vIp), Common.Common.SCALE_PORT);
+
+            readScale = true;
+
+            var throttler = new SemaphoreSlim(20); // max 20 concurrent reads
+
+            while (readScale)
             {
-                dictionaryScales.Clear();
-                dictionaryWeighings.Clear();
-                dictionaryTotalWeighings.Clear();
+                var start = DateTime.Now;
 
-                Scales = new ObservableCollection<Models.Scale>(_scales.Take(200));
-
-                foreach (Scale scale in Scales)
+                var tasks = dictionaryScales.Select(async kvp =>
                 {
-                    dictionaryScales.Add(scale.vName, new IPEndPoint(IPAddress.Parse(scale.vIp), Common.Common.SCALE_PORT));
-                    dictionaryWeighings.Add(scale.vName, 0);
-                    dictionaryTotalWeighings.Add(scale.vName, 0);
-                }
+                    await throttler.WaitAsync();
+                    try { await LeerPesoDeBasculaAsync(kvp.Key, kvp.Value); }
+                    finally { throttler.Release(); }
+                });
 
-                // Evento para cerrar las conexiones y cancelar tareas al salir del programa
-                AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) =>
+                await Task.WhenAll(tasks);
+
+                _ = App.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    foreach (var cts in cancellationTokens.Values)
-                    {
-                        cts.Cancel();
-                    }
+                    OnlineCount = _scales.Count(s => s.iStatus == 1);
+                    OfflineCount = _scales.Count(s => s.iStatus == 0);
+                });
 
-                    foreach (var socket in sockets.Values)
-                    {
-                        if (socket.Connected)
-                        {
-                            socket.Close();
-                        }
-                    }
-                };
-
-                while (readScale)
-                {
-                    Dictionary<string, string> pesos = await LeerPesosDeBasculasAsync(dictionaryScales);
-
-                    foreach (var peso in pesos)
-                    {
-                        var updateScale = _scales?.FirstOrDefault(b => b.vName == peso.Key);
-                        if (updateScale != null)
-                        {
-                            updateScale.fWeight = peso.Value;
-                        }
-
-                        Scales = new ObservableCollection<Models.Scale>(_scales.Take(200));
-                    }
-
-                    Thread.Sleep(500);
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowAlert(Common.Common.MSG_ERROR_READ_SCALE + " " + ex.Message);
+                var elapsed = (DateTime.Now - start).TotalMilliseconds;
+                var delay = Math.Max(0, 333 - elapsed);
+                await Task.Delay((int)delay);
             }
         }
 
         public void CommunicationDisconect(int status)
         {
-            try
+            readScale = false;
+            foreach (var s in sockets.Values)
             {
-                // Cerrar las conexiones y cancelar tareas al descargar la ventana
-                foreach (var cts in cancellationTokens.Values)
-                {
-                    cts.Cancel();
-                }
-
-                foreach (var socket in sockets.Values)
-                {
-                    if (socket.Connected)
-                    {
-                        socket.Close();
-                    }
-                }
-
-                foreach (var scale in dictionaryScales)
-                {
-                    cancellationTokens.TryRemove(scale.Key, out _);
-                    sockets.TryRemove(scale.Key, out _);
-                }
-
-                readScale = false;
+                try { s.Shutdown(SocketShutdown.Both); s.Close(); } catch { }
             }
-            catch (Exception ex)
-            {
-                ShowAlert(Common.Common.MSG_ERROR_DISCONNECT + " " + ex.Message);
-            }
+            sockets.Clear();
         }
 
         public void resetScales()
         {
             foreach (var scale in dictionaryScales)
             {
-                var scaleValues     = _scales?.FirstOrDefault(b => b.vName == scale.Key);
-                scaleValues.iSamples= 0;
-                scaleValues.fTotal  = "0";
+                var scaleValues = _scales?.FirstOrDefault(b => b.vName == scale.Key);
+                scaleValues.iSamples = 0;
+                scaleValues.fTotal = "0";
             }
         }
 
@@ -394,9 +370,9 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
             foreach (var bascula in basculas)
             {
-                string nombreBascula= bascula.Key;
+                string nombreBascula = bascula.Key;
                 IPEndPoint endpoint = bascula.Value;
-                string peso         = await LeerPesoDeBasculaAsync(nombreBascula,endpoint);
+                string peso = await LeerPesoDeBasculaAsync(nombreBascula, endpoint);
 
                 resultados[nombreBascula] = peso;
             }
@@ -406,100 +382,78 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
         public async Task<string> LeerPesoDeBasculaAsync(string nombreBascula, IPEndPoint endpoint)
         {
             string peso = null;
-            Socket socket = null;
-            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            cancellationTokens[nombreBascula] = cts;
 
             try
             {
-                if (sockets.ContainsKey(nombreBascula) && sockets[nombreBascula].Connected)
+                Socket socket;
+
+                // Reutilizar socket existente
+                if (!sockets.TryGetValue(nombreBascula, out socket) || !socket.Connected)
                 {
-                    socket = sockets[nombreBascula];
-                }
-                else
-                {
-                    socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+                    {
+                        NoDelay = true // Desactivar Nagle para respuesta inmediata
+                    };
+
                     await socket.ConnectAsync(endpoint);
                     sockets[nombreBascula] = socket;
                 }
 
-                if (socket.Connected)
+                // Enviar comando "P"
+                byte[] comando = Encoding.ASCII.GetBytes("P");
+                await socket.SendAsync(comando, SocketFlags.None);
+
+                // Leer respuesta
+                byte[] buffer = new byte[1024];
+                socket.ReceiveTimeout = 1000; // 1 segundo de timeout
+                int bytesRead = await socket.ReceiveAsync(buffer, SocketFlags.None);
+
+                peso = Encoding.ASCII.GetString(buffer, 0, bytesRead).Trim('\r', '\n');
+
+                string pesoNet = peso.TrimStart().Split(' ')[0];
+
+                var scale = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
+                if (scale != null)
                 {
-                    await socket.SendAsync(Encoding.ASCII.GetBytes("P"), SocketFlags.None, cts.Token);
-
-                    byte[] buffer   = new byte[1024];
-                    int bytesRead   = await socket.ReceiveAsync(buffer, SocketFlags.None, cts.Token);
-                    peso            = Encoding.ASCII.GetString(buffer, 0, bytesRead).Trim('\r', '\n');
-
-                    var pesoNet     = peso.TrimStart().Split(' ')[0];
-
-                    var scaleValues = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
-                    float minWeight = (float)Math.Round(float.Parse(scaleValues.fMinWeight), 2);
-
-                    scaleValues.iStatus = 1;
+                    float minWeight = (float)Math.Round(float.Parse(scale.fMinWeight), 2);
+                    scale.iStatus = 1;
+                    scale.fWeight = peso;
 
                     if (float.TryParse(pesoNet, out float pesoNumerico))
                     {
-                        float pesoNumerico_temp = (float)Math.Round(float.Parse(pesoNumerico.ToString()), 2);
-
-                        if (pesoNumerico_temp <= minWeight && maximosPesos.ContainsKey(nombreBascula) && maximosPesos[nombreBascula] != 0 && maximosPesos[nombreBascula] > minWeight)
+                        float pesoRedondeado = (float)Math.Round(pesoNumerico, 2);
+                        //// revisar pesoMaxAnterior
+                        if (pesoRedondeado <= minWeight && maximosPesos.TryGetValue(nombreBascula, out float pesoMaxAnterior) && pesoMaxAnterior > minWeight)
                         {
-                            GuardaPesos(nombreBascula, maximosPesos[nombreBascula]);
+                            GuardaPesos(nombreBascula, pesoMaxAnterior);
                             dictionaryWeighings[nombreBascula]++;
+                            dictionaryTotalWeighings[nombreBascula] = (float)Math.Round(dictionaryTotalWeighings[nombreBascula] + pesoMaxAnterior, 2);
 
-                            float WeightTotal_temp                  = dictionaryTotalWeighings[nombreBascula] + maximosPesos[nombreBascula];
-                            float WeightTotal                       = (float)Math.Round(WeightTotal_temp, 2);
-                            dictionaryTotalWeighings[nombreBascula] = WeightTotal;
-
-
-                            scaleValues.iSamples= dictionaryWeighings[nombreBascula];
-                            scaleValues.fTotal  = dictionaryTotalWeighings[nombreBascula].ToString();
-                            Scales = new ObservableCollection<Models.Scale>(_scales.Take(200));
-
+                            scale.iSamples = dictionaryWeighings[nombreBascula];
+                            scale.fTotal = dictionaryTotalWeighings[nombreBascula].ToString();
                             maximosPesos[nombreBascula] = 0;
                         }
                         else
                         {
-                            maximosPesos.AddOrUpdate(nombreBascula, pesoNumerico_temp, (key, oldValue) => Math.Max(oldValue, pesoNumerico_temp));
+                            maximosPesos.AddOrUpdate(nombreBascula, pesoRedondeado, (key, oldVal) => Math.Max(oldVal, pesoRedondeado));
                         }
                     }
                 }
-                else
-                {
-                    Console.WriteLine($"Conexión fallida a {endpoint}. Intentando reconectar...");
-                    socket.Close();
-                    sockets.TryRemove(nombreBascula, out _);
-                    //peso = await LeerPesoDeBasculaAsync(nombreBascula, endpoint); // Intenta reconectar recursivamente
-                    peso = string.Empty;
-
-                    var scaleValues = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
-
-                    if(scaleValues != null)
-                        scaleValues.iStatus = 0;
-                }
             }
-            catch (OperationCanceledException)
+            catch (SocketException)
             {
-                Console.WriteLine($"Lectura de báscula {nombreBascula} cancelada.");
+                var scale = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
+                if (scale != null) scale.iStatus = 0;
 
-                var scaleValues = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
-
-                if (scaleValues != null)
-                    scaleValues.iStatus = 0;
+                // Cerrar y remover socket dañado
+                if (sockets.TryRemove(nombreBascula, out var socket))
+                {
+                    try { socket.Close(); } catch { }
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al leer la báscula en {endpoint}: {ex.Message}");
-            }
-            finally
-            {
-                cts.Dispose();
-                cancellationTokens.TryRemove(nombreBascula, out _);
-                if (socket != null && socket.Connected)
-                {
-                    socket.Close();
-                    sockets.TryRemove(nombreBascula, out _);
-                }
+                Console.WriteLine($"Error leyendo báscula {nombreBascula}: {ex.Message}");
             }
 
             return peso;

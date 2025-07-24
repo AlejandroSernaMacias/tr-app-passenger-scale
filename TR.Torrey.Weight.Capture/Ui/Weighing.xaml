@@ -4,10 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:TR.Torrey.Weight.Capture.Ui"
+             xmlns:local="clr-namespace:TR.Torrey.Weight.Capture.Converters"
              mc:Ignorable="d" 
              Style="{StaticResource StyleUC}">
-
+    
+    <UserControl.Resources>
+        <local:StringToColorConverter x:Key="StringToColorConverter"/>
+    </UserControl.Resources>
+    
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
@@ -40,11 +44,17 @@
                 <ColumnDefinition Width="auto"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0">
-                <Label Content="{Binding ScalesFound}" Style="{StaticResource ItemsFound}"/>
+            <Grid Grid.Column="0" >
+                <!--<Label Content="{Binding ScalesFound}" Style="{StaticResource ItemsFound}"/>-->
+                <StackPanel Orientation="Horizontal" Margin="10,10,10,0" HorizontalAlignment="Right">
+                    <TextBlock Text="Online: " FontWeight="Bold" Foreground="Green" Margin="0,0,5,0"/>
+                    <TextBlock Text="{Binding OnlineCount}" Foreground="Green" Margin="0,0,15,0"/>
+
+                    <TextBlock Text="Offline: " FontWeight="Bold" Foreground="DarkRed" Margin="0,0,5,0"/>
+                    <TextBlock Text="{Binding OfflineCount}" Foreground="DarkRed"/>
+                </StackPanel>
             </Grid>
             <Grid Grid.Column="1">
-                <Label Content="{Binding Weight}" Style="{StaticResource ItemsFound}"/>
             </Grid>
 
             <Border Grid.Column="2" Style="{StaticResource BorderTextBoxBlack}" Margin="10,0">
@@ -62,34 +72,68 @@
 
         </Grid>
 
-        <DataGrid Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" ItemsSource="{Binding Scales}" Margin="10,50,10,10" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" Style="{StaticResource MaterialDesignDataGrid}">
+        <DataGrid Grid.Row="2"
+          AutoGenerateColumns="False"
+          CanUserAddRows="False"
+          CanUserDeleteRows="False"
+          ItemsSource="{Binding Scales}"
+          Margin="10,50,10,10"
+          Background="Transparent"
+          BorderBrush="Transparent"
+          BorderThickness="1"
+          Style="{StaticResource MaterialDesignDataGrid}"
+          IsReadOnly="True">
 
             <DataGrid.Resources>
-                <!-- Definir el estilo para los encabezados -->
+                <!-- Encabezados -->
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="Background" Value="#009c36"/>
                     <Setter Property="Foreground" Value="White"/>
                     <Setter Property="FontWeight" Value="Bold"/>
                     <Setter Property="Padding" Value="10"/>
                 </Style>
-                <!-- Estilo para las filas -->
+
+                <!-- Filas -->
                 <Style TargetType="DataGridRow">
                     <Setter Property="BorderBrush" Value="#414141"/>
                     <Setter Property="BorderThickness" Value="1"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsWeightUpdated}" Value="True">
+                            <Setter Property="Background" Value="LightGreen"/>
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
             </DataGrid.Resources>
-            
+
             <DataGrid.Columns>
-                <DataGridTextColumn x:Name="HeaderScaleName"    Binding="{Binding vName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderIp"           Binding="{Binding vIp, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderMinWeight"    Binding="{Binding fMinWeight, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderMinTime"      Binding="{Binding iMinTime, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderScaleStatus"  Binding="{Binding vStatusScale, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="{Binding vStatusColor}" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderSamples"      Binding="{Binding iSamples, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderWeight"       Binding="{Binding fWeight, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
-                <DataGridTextColumn x:Name="HeaderTotal"        Binding="{Binding fTotal, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderScaleName"    Header="Báscula" Binding="{Binding vName}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderIp"           Header="IP" Binding="{Binding vIp}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderMinWeight"    Header="Min. Peso" Binding="{Binding fMinWeight}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderMinTime"      Header="Min. Tiempo" Binding="{Binding iMinTime}" IsReadOnly="True" Foreground="#414141" Width="*"/>
+
+                <!-- Estado con color y texto -->
+                <DataGridTemplateColumn x:Name="HeaderScaleStatus" Header="Estado" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="12" Height="12" Margin="0,0,5,0">
+                                    <Ellipse.Fill>
+                                        <SolidColorBrush Color="{Binding vStatusColor, Converter={StaticResource StringToColorConverter}}"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <TextBlock Text="{Binding vStatusScale}" Foreground="#414141" FontWeight="Bold"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn x:Name="HeaderSamples" Header="Muestras" Binding="{Binding iSamples}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderWeight"  Header="Peso" Binding="{Binding fWeight}" IsReadOnly="True" Foreground="#414141" FontWeight="Bold" Width="*"/>
+                <DataGridTextColumn x:Name="HeaderTotal"   Header="Total" Binding="{Binding fTotal}" IsReadOnly="True" Foreground="#414141" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
+
 
     </Grid>
 </UserControl>
