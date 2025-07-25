@@ -10,6 +10,7 @@
     
     <UserControl.Resources>
         <local:StringToColorConverter x:Key="StringToColorConverter"/>
+        <local:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
     </UserControl.Resources>
     
     <Grid Margin="10">
@@ -124,6 +125,20 @@
                                 </Ellipse>
                                 <TextBlock Text="{Binding vStatusScale}" Foreground="#414141" FontWeight="Bold"/>
                             </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Estado con color y texto -->
+                <DataGridTemplateColumn x:Name="HeaderScaleReconect" Header="Accion" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Reconectar"
+                                        Width="90"
+                                        Margin="10,0,0,0"
+                                        Command="{Binding DataContext.ReconectarCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Visibility="{Binding iStatus, Converter={StaticResource StatusToVisibilityConverter}}"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

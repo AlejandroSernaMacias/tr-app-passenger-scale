@@ -26,6 +26,7 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
         IDialogAlert _dialogAlert;
         public ICommand CommunicationDisconectCommand { get; }
         public ICommand ReportCommand { get; }
+        public ICommand ReconectarCommand { get; }
 
         private static ConcurrentDictionary<string, Socket> sockets = new ConcurrentDictionary<string, Socket>();
         private static ConcurrentDictionary<string, CancellationTokenSource> cancellationTokens = new ConcurrentDictionary<string, CancellationTokenSource>();
@@ -124,8 +125,9 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
         public WeighingViewModel(IDialogAlert dialogAlert)
         {
-            ReportCommand = new RelayCommand<int>(Report);
-            CommunicationDisconectCommand = new RelayCommand<int>(CommunicationDisconect);
+            ReportCommand                   = new RelayCommand<int>(Report);
+            CommunicationDisconectCommand   = new RelayCommand<int>(CommunicationDisconect);
+            ReconectarCommand               = new RelayCommand<Scale>(ReconectarBascula);
 
             this._dialogAlert = dialogAlert;
 
@@ -309,7 +311,7 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
         }
 
         #endregion
-        public async void readScales()
+        public void readScales()
         {
             dictionaryScales.Clear();
             foreach (var sc in _scales.Take(200))
@@ -317,41 +319,75 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
 
             readScale = true;
 
-            var throttler = new SemaphoreSlim(20); // max 20 concurrent reads
-
-            while (readScale)
+            foreach (var kvp in dictionaryScales)
             {
-                var start = DateTime.Now;
+                var nombre = kvp.Key;
+                var endpoint = kvp.Value;
 
-                var tasks = dictionaryScales.Select(async kvp =>
+                // Cancelar tarea anterior si existe
+                if (cancellationTokens.TryRemove(nombre, out var oldToken))
+                    oldToken.Cancel();
+
+                var cts = new CancellationTokenSource();
+                cancellationTokens[nombre] = cts;
+
+                // Iniciar tarea de lectura recurrente
+                Task.Run(async () =>
                 {
-                    await throttler.WaitAsync();
-                    try { await LeerPesoDeBasculaAsync(kvp.Key, kvp.Value); }
-                    finally { throttler.Release(); }
-                });
+                    while (readScale && !cts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            var peso = await LeerPesoDeBasculaAsync(nombre, endpoint);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Omitimos errores por desconexión temporal
+                        }
 
-                await Task.WhenAll(tasks);
-
-                _ = App.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    OnlineCount = _scales.Count(s => s.iStatus == 1);
-                    OfflineCount = _scales.Count(s => s.iStatus == 0);
-                });
-
-                var elapsed = (DateTime.Now - start).TotalMilliseconds;
-                var delay = Math.Max(0, 333 - elapsed);
-                await Task.Delay((int)delay);
+                        await Task.Delay(250, cts.Token); // 4 veces por segundo
+                    }
+                }, cts.Token);
             }
+
+            // Tarea general para actualizar el estado online/offline de la UI 1 vez por segundo
+            _ = Task.Run(async () =>
+            {
+                while (readScale)
+                {
+                    await Task.Delay(1000);
+                    await App.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        OnlineCount = _scales.Count(s => s.iStatus == 1);
+                        OfflineCount = _scales.Count(s => s.iStatus == 0);
+                    });
+                }
+            });
         }
+
 
         public void CommunicationDisconect(int status)
         {
             readScale = false;
+
+            foreach (var token in cancellationTokens.Values)
+            {
+                try { token.Cancel(); } catch { }
+            }
+            cancellationTokens.Clear();
+
             foreach (var s in sockets.Values)
             {
                 try { s.Shutdown(SocketShutdown.Both); s.Close(); } catch { }
             }
             sockets.Clear();
+        }
+        private void ReconectarBascula(Scale scale)
+        {
+            if (scale == null)
+                return;
+
+            scale.iStatus = 1; // Activar de nuevo la lectura
         }
 
         public void resetScales()
@@ -381,80 +417,98 @@ namespace TR.Torrey.Weight.Capture.Viewmodels
         }
         public async Task<string> LeerPesoDeBasculaAsync(string nombreBascula, IPEndPoint endpoint)
         {
-            string peso = null;
+            string peso = string.Empty;
+
+            var scale = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
+            if (scale == null || scale.iStatus != 1)
+                return peso;
 
             try
             {
                 Socket socket;
 
-                // Reutilizar socket existente
+                // Reutilizar socket existente o crear uno nuevo
                 if (!sockets.TryGetValue(nombreBascula, out socket) || !socket.Connected)
                 {
                     socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                     {
-                        NoDelay = true // Desactivar Nagle para respuesta inmediata
+                        NoDelay = true
                     };
 
                     await socket.ConnectAsync(endpoint);
                     sockets[nombreBascula] = socket;
                 }
 
-                // Enviar comando "P"
+                // Enviar comando para pedir peso
                 byte[] comando = Encoding.ASCII.GetBytes("P");
                 await socket.SendAsync(comando, SocketFlags.None);
 
-                // Leer respuesta
-                byte[] buffer = new byte[1024];
-                socket.ReceiveTimeout = 1000; // 1 segundo de timeout
-                int bytesRead = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                // Configurar cancelación por timeout usando Task.WhenAny
+                var buffer = new byte[1024];
+                Task<int> receiveTask = socket.ReceiveAsync(buffer, SocketFlags.None);
+                Task timeoutTask = Task.Delay(1000);
+
+                if (await Task.WhenAny(receiveTask, timeoutTask) == timeoutTask)
+                {
+                    throw new TimeoutException("Timeout al recibir peso.");
+                }
+
+                int bytesRead = receiveTask.Result;
+
+                // Si no recibimos datos, consideramos que falló
+                if (bytesRead == 0)
+                {
+                    scale.iStatus = 0;
+                    return peso;
+                }
 
                 peso = Encoding.ASCII.GetString(buffer, 0, bytesRead).Trim('\r', '\n');
 
                 string pesoNet = peso.TrimStart().Split(' ')[0];
 
-                var scale = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
-                if (scale != null)
+                if (float.TryParse(pesoNet, out float pesoNumerico))
                 {
+                    float pesoRed = (float)Math.Round(pesoNumerico, 2);
                     float minWeight = (float)Math.Round(float.Parse(scale.fMinWeight), 2);
-                    scale.iStatus = 1;
-                    scale.fWeight = peso;
 
-                    if (float.TryParse(pesoNet, out float pesoNumerico))
+                    if (pesoRed <= minWeight &&
+                        maximosPesos.TryGetValue(nombreBascula, out float pesoMaxAnt) &&
+                        pesoMaxAnt > minWeight)
                     {
-                        float pesoRedondeado = (float)Math.Round(pesoNumerico, 2);
-                        //// revisar pesoMaxAnterior
-                        if (pesoRedondeado <= minWeight && maximosPesos.TryGetValue(nombreBascula, out float pesoMaxAnterior) && pesoMaxAnterior > minWeight)
-                        {
-                            GuardaPesos(nombreBascula, pesoMaxAnterior);
-                            dictionaryWeighings[nombreBascula]++;
-                            dictionaryTotalWeighings[nombreBascula] = (float)Math.Round(dictionaryTotalWeighings[nombreBascula] + pesoMaxAnterior, 2);
+                        GuardaPesos(nombreBascula, pesoMaxAnt);
+                        dictionaryWeighings[nombreBascula]++;
+                        dictionaryTotalWeighings[nombreBascula] = (float)Math.Round(dictionaryTotalWeighings[nombreBascula] + pesoMaxAnt, 2);
 
-                            scale.iSamples = dictionaryWeighings[nombreBascula];
-                            scale.fTotal = dictionaryTotalWeighings[nombreBascula].ToString();
-                            maximosPesos[nombreBascula] = 0;
-                        }
-                        else
-                        {
-                            maximosPesos.AddOrUpdate(nombreBascula, pesoRedondeado, (key, oldVal) => Math.Max(oldVal, pesoRedondeado));
-                        }
+                        scale.iSamples = dictionaryWeighings[nombreBascula];
+                        scale.fTotal = dictionaryTotalWeighings[nombreBascula].ToString();
+                        maximosPesos[nombreBascula] = 0;
+                    }
+                    else
+                    {
+                        maximosPesos.AddOrUpdate(nombreBascula, pesoRed, (key, oldVal) => Math.Max(oldVal, pesoRed));
                     }
                 }
-            }
-            catch (SocketException)
-            {
-                var scale = _scales?.FirstOrDefault(b => b.vName == nombreBascula);
-                if (scale != null) scale.iStatus = 0;
 
-                // Cerrar y remover socket dañado
+                // Reactivar la báscula si todo fue exitoso
+                scale.iStatus = 1;
+            }
+            catch (Exception)
+            {
+                scale.iStatus = 0;
+
+                // Intentar cerrar el socket en caso de error
                 if (sockets.TryRemove(nombreBascula, out var socket))
                 {
                     try { socket.Close(); } catch { }
                 }
             }
-            catch (Exception ex)
+
+            // Actualizar la UI desde el hilo principal
+            await App.Current.Dispatcher.InvokeAsync(() =>
             {
-                Console.WriteLine($"Error leyendo báscula {nombreBascula}: {ex.Message}");
-            }
+                OnlineCount = _scales.Count(s => s.iStatus == 1);
+                OfflineCount = _scales.Count(s => s.iStatus == 0);
+            });
 
             return peso;
         }
